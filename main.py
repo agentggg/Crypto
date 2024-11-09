@@ -61,10 +61,27 @@ class CryptoView():
         st.plotly_chart(fig)
     
     def selectedCryptoChart(self, crypto):
-        filtered_object = [each_crypto for each_crypto in quote() if each_crypto["name"] == crypto][0]
-        st.subheader(filtered_object['name'])
-        df = pd.DataFrame.from_dict(filtered_object, orient='index')
-        st.scatter_chart(df)
+        filtered_object = [{"Open":each_crypto["open"], "High":each_crypto["high"], "Low":each_crypto["low"],"Close":each_crypto["close"],   } for each_crypto in overtime_data() if each_crypto["name"] == crypto]
+        st.subheader(crypto)
+        df = pd.DataFrame(filtered_object)
+        print(f"==>> df: {df}")
+        # Create candlestick chart
+        fig = go.Figure(data=[go.Candlestick(
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close'],
+            increasing_line_color='green',
+            decreasing_line_color='red'
+        )])
+
+        # Customize the layout
+        # fig.update_layout(title="Stock Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
+        fig.update_layout(title="Stock Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
+
+
+        # Display the chart in Streamlit
+        st.plotly_chart(fig)
 
     def loadingComponent(self):
         motivation_placeholder = st.empty()
