@@ -64,7 +64,6 @@ class CryptoView():
         filtered_object = [{"Open":each_crypto["open"], "High":each_crypto["high"], "Low":each_crypto["low"],"Close":each_crypto["close"],   } for each_crypto in overtime_data() if each_crypto["name"] == crypto]
         st.subheader(crypto)
         df = pd.DataFrame(filtered_object)
-        print(f"==>> df: {df}")
         # Create candlestick chart
         fig = go.Figure(data=[go.Candlestick(
             open=df['Open'],
@@ -75,9 +74,8 @@ class CryptoView():
             decreasing_line_color='red'
         )])
 
-        # Customize the layout
         # fig.update_layout(title="Stock Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
-        fig.update_layout(title="Stock Candlestick Chart", xaxis_title="Date", yaxis_title="Price")
+        fig.update_layout(title="Stock Candlestick Chart", yaxis_title="Price")
 
 
         # Display the chart in Streamlit
