@@ -484,7 +484,7 @@ class CryptoView:
             st.download_button(
                 label="Tap to Download Python Code For Better Viewing",
                 data=content,
-                file_name="Stevenson_Stock_App.html",  # Set the desired filename with .py extension
+                file_name="Stevenson_Stock_App.py",  # Set the desired filename with .py extension
                 mime="text/plain"  # Set the MIME type to plain text
             )
             
