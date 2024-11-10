@@ -484,10 +484,24 @@ class CryptoView:
         st.markdown("### Press the 3 dots on the top right hand side and select wide for a better view 🙏🏾")
         st.markdown("### Now if you are on a mobile device, rotate your device to landscape for an even better view 🙏🏾")
 
-        # Open the current script file in read mode and display its content
+        # Inject custom CSS to enable line wrapping for `st.code()`
+        st.markdown(
+            """
+            <style>
+            .streamlit-container pre {
+                white-space: pre-wrap;       /* Enable line wrapping */
+                word-wrap: break-word;       /* Break words if necessary */
+                overflow-x: auto;            /* Allow horizontal scrolling if needed */
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+
+        # Open the script file and display it with wrapping enabled
         with open('main.py', 'r') as f:
             content = f.read()  # Read the entire content of the file
-            st.code(content, language='python')  # Display the source code with syntax highlighting
+            st.code(content, language='python')  # Display the source code with wrapping
 
         if st.button("Tap Twice to Go Back to Dashboard."):
             st.session_state["current_view"] = "dashboard"  # Update session state to display the dashboard view
