@@ -480,7 +480,13 @@ class CryptoView:
 
         with open('main.py', 'r') as f:
             content = f.read()  # Read the entire content of the file
-            st.download_button("Tap to Download Python Code For Better Viewing", content)
+            # Provide a download button with the specified filename and extension
+            st.download_button(
+                label="Tap to Download Python Code For Better Viewing",
+                data=content,
+                file_name="Stevenson_Stock_App.py",  # Set the desired filename with .py extension
+                mime="text/plain"  # Set the MIME type to plain text
+            )
             
         #Displays the source code of the current script using Streamlit's `st.code()` component.
         #Returns: - None
