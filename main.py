@@ -36,7 +36,7 @@ from api.backend_data import quote, overtime_data  # Import backend data handlin
 
 # Configure logging with a specific format and level
 logging.basicConfig(
-    level=logging.CRITICAL,  # Set logging level to show only critical errors
+    level=logging.WARNING,  # Set logging level to show only critical errors
     format="{asctime} | {levelname} | {name} | {message}",  # Define the format for log messages
     style="{",  # Use the new style format with curly braces
     datefmt="%Y-%m-%d %H:%M:%S",  # Set the date format for log messages
@@ -147,7 +147,7 @@ class CryptoView:
         real_time_price_response = self.apiCall('price', real_time_price_parameter, False)
 
         # Construct API parameters for monthly time series
-        time_series_parameter = f"?symbol={crypto['symbol']}&interval=1month&apikey={os.getenv('TOKEN')}"
+        time_series_parameter = f"?symbol={crypto['symbol']}&interval=1month&outputsize=12&apikey={os.getenv('TOKEN')}"
         # Fetch monthly time series data
         time_series_response = self.apiCall('time_series', time_series_parameter, False)
 
@@ -200,10 +200,14 @@ class CryptoView:
         ))
 
         # Update layout and display the graph
-        fig.update_layout(xaxis_title="Date", yaxis_title="Price (USD)")
-        st.plotly_chart(fig)
-
-    
+        fig.update_layout(
+            xaxis_title="Date", 
+            yaxis_title="Price (USD)",
+            margin=dict(l=10, r=10, t=30, b=10),  # Reduce margins for a larger display area
+            height=600  # Increase the height of the chart
+            )
+        st.plotly_chart(fig, use_container_width=True)
+  
     def selectedCryptoChart(self, crypto):
         """
         Fetches and displays real-time price, monthly trend, and daily trend charts for a selected cryptocurrency.
@@ -474,7 +478,10 @@ class CryptoView:
             st.session_state["current_view"] = "dashboard"  # Update session state to display the dashboard view
             st.session_state.clear()  # Clear session state to force a re-render of the dashboard view
 
-        
+        with open('main.py', 'r') as f:
+            content = f.read()  # Read the entire content of the file
+            st.download_button("Tap to Download Python Code in For Better Viewing", content)
+            
         #Displays the source code of the current script using Streamlit's `st.code()` component.
         #Returns: - None
         # Display the title of the source code view
