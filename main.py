@@ -468,7 +468,7 @@ class CryptoView:
         # Display the title of the source code view
         st.title("Source Code View")
         # Display a markdown message
-        st.markdown("### Here you can display the source code or any other content.")
+        st.markdown("### Press the 3 dots on the top right hand side and select wide for a better view 🙏🏾")
 
         # Open the current script file in read mode and display its content
         with open('main.py', 'r') as f:
