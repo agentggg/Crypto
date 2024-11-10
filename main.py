@@ -374,7 +374,7 @@ class CryptoView:
             st.session_state["current_view"] = "dashboard"  # Set the default view to 'dashboard'
 
         # Button to switch to the source code view
-        if st.button("Switch to Source Code View"):
+        if st.button("Switch to Checkout Python Source Code 👏🏾🎬🐍💻📚📈"):
             st.session_state["current_view"] = "source_code"  # Update session state to display the source code view
 
         # Conditional rendering based on the current view
