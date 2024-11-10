@@ -480,9 +480,14 @@ class CryptoView:
         # Display the title of the source code view
         st.title("Source Code View")
         # Display a markdown message
-        st.header('Instructions')
-        st.markdown("### Press the 3 dots on the top right hand side and select wide for a better view 🙏🏾")
-        st.markdown("### Now if you are on a mobile device, rotate your device to landscape for an even better view 🙏🏾")
+        st.header('Instructions 😄')
+        st.markdown(
+            """
+            1. Press the 3 dots on the top right side and select **Wide mode** for a better view. 🙏🏾
+            2. If you are on a mobile device, rotate your device to landscape mode for an even better view. 🙏🏾
+            """
+        )
+
 
         # Inject custom CSS to enable line wrapping for `st.code()`
         st.markdown(
