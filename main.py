@@ -483,8 +483,9 @@ class CryptoView:
         st.header('Instructions 😄')
         st.markdown(
             """
-            1. Press the 3 dots on the top right side and select **Wide mode** for a better view. 🙏🏾
-            2. If you are on a mobile device, rotate your device to landscape mode for an even better view. 🙏🏾
+            1. Press the 3 dots on the top right side and select **Wide mode** for a better view. ... 🙏🏾
+            2. If you are on a mobile device, rotate your device to landscape mode for an even better view. 🙏🏾📲
+            3. Or you can just view it on a laptop for the best experience. 🙏🏾😄💻
             """
         )
 
