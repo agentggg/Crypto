@@ -480,7 +480,7 @@ class CryptoView:
 
         with open('main.py', 'r') as f:
             content = f.read()  # Read the entire content of the file
-            st.download_button("Tap to Download Python Code in For Better Viewing", content)
+            st.download_button("Tap to Download Python Code For Better Viewing", content)
             
         #Displays the source code of the current script using Streamlit's `st.code()` component.
         #Returns: - None
