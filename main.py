@@ -355,11 +355,23 @@ class CryptoView:
         Returns:
         - None
         """
-        # Open the current script file in read mode
+        st.markdown(
+            """
+            <style>
+            .streamlit-container pre {
+                white-space: pre-wrap;       /* Enable line wrapping */
+                word-wrap: break-word;       /* Break words if necessary */
+                overflow-x: auto;            /* Allow horizontal scrolling if needed */
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        ) #allows wrapping and styling to fit your screen
+
+        # Open the script file and display it with wrapping enabled
         with open('main.py', 'r') as f:
             content = f.read()  # Read the entire content of the file
-            # Display the source code in a formatted code block with syntax highlighting
-            st.code(content, language='python')
+            st.code(content, language='python')  # Display the source code with wrapping
 
 
     def main(self):
