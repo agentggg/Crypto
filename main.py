@@ -1,233 +1,487 @@
-import os
-import time
-import random
-from dotenv import load_dotenv
-import logging
-from decimal import Decimal
+"""
+Real-Time Cryptocurrency Dashboard
 
-import streamlit as st
-import requests
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from twelvedata import TDClient
+This script implements a real-time cryptocurrency dashboard using Streamlit. It interacts with the Twelve Data API
+to fetch and visualize market data. The application features OHLC candlestick charts, line graphs, and dynamic user inputs,
+providing insights into cryptocurrency trends.
 
-from api.motivational import motivational
-from api.backend_data import quote, overtime_data
+Features:
+- API integration for fetching real-time and historical cryptocurrency data.
+- Visualization using Plotly (OHLC and line charts).
+- Interactive UI with motivational messages.
+- Configurable logging for debugging and monitoring.
 
- 
+Dependencies:
+- streamlit, pandas, plotly, requests, dotenv, twelvedata
+
+Author: Stevenson Gerard
+"""
+
+import os  # Import os module for environment variable handling
+import time  # Import time module for sleep delays
+import random  # Import random module for random selections
+import logging  # Import logging module for logging configuration
+from decimal import Decimal  # Import Decimal for precise numeric representation
+
+import streamlit as st  # Import Streamlit for web app interface
+import requests  # Import requests module for making HTTP requests
+import pandas as pd  # Import pandas for data manipulation
+import plotly.graph_objects as go  # Import Plotly for advanced charting
+import plotly.express as px  # Import Plotly Express for simpler charting
+from dotenv import load_dotenv  # Import load_dotenv to read .env files
+from twelvedata import TDClient  # Import TDClient for Twelve Data API access
+
+from api.motivational import motivational  # Import motivational texts for user interface
+from api.backend_data import quote, overtime_data  # Import backend data handling
+
+# Configure logging with a specific format and level
 logging.basicConfig(
-    level=logging.CRITICAL,  # Set the logging level to INFO
-    format="{asctime} | {levelname} | {name} | {message}",
-    style="{",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    force=True,  # Ensures that previous configurations are overridden
+    level=logging.CRITICAL,  # Set logging level to show only critical errors
+    format="{asctime} | {levelname} | {name} | {message}",  # Define the format for log messages
+    style="{",  # Use the new style format with curly braces
+    datefmt="%Y-%m-%d %H:%M:%S",  # Set the date format for log messages
+    force=True,  # Override any previous logging configuration
 )
 
-# Suppress DEBUG logs from `urllib3` and `requests`
+# Suppress verbose DEBUG logs from external libraries
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("requests").setLevel(logging.WARNING)
 
+# Load environment variables from the .env file
 load_dotenv()
 
 
-class CryptoView():
+class CryptoView:
+    """
+    CryptoView Class
+
+    This class contains methods for fetching, processing, and visualizing cryptocurrency data
+    within a Streamlit application.
+    """
+
     def dataset_arrays(self):
+        """
+        Generates a random color and motivational text for UI elements.
+
+        Returns:
+        - tuple: (str, str) A random color and a motivational text.
+        """
+        # Select a random color for UI elements
         gui_color = self.randomColorSelection(["green", "orange", "red", "violet", "gray", "rainbow"])
+        # Select a random motivational text
         motivational_text = self.randomColorSelection(motivational())
-        return gui_color, motivational_text
+        return gui_color, motivational_text  # Return both selections as a tuple
 
     def randomColorSelection(self, dataset):
+        """
+        Randomly selects an item from a given list.
+
+        Parameters:
+        - dataset (list): List of items to choose from.
+
+        Returns:
+        - str: A randomly selected item from the list.
+        """
+        # Calculate the maximum index for random selection
         array_length = len(dataset) - 1
+        # Generate a random index
         random_number = random.randint(0, array_length)
-        random_color_selection = dataset[random_number]
-        return random_color_selection
-    
+        # Return the item at the randomly selected index
+        return dataset[random_number]
+
     def allMarketData(self):
+        """
+        Fetches and displays an OHLC candlestick chart for market data.
+
+        Returns:
+        - None
+        """
+        # Load market data into a pandas DataFrame
         df = pd.DataFrame(quote())
 
+        # Convert string columns to numeric types for plotting
         df['open'] = pd.to_numeric(df['open'])
         df['high'] = pd.to_numeric(df['high'])
         df['low'] = pd.to_numeric(df['low'])
         df['close'] = pd.to_numeric(df['close'])
         df['timestamp'] = pd.to_datetime(df['timestamp'])
 
-        # Sort by timestamp
+        # Sort data by timestamp for correct chronological plotting
         df.sort_values(by='timestamp', inplace=True)
 
-        # Create a Plotly OHLC Chart
+        # Create a candlestick chart using Plotly
         fig = go.Figure(data=go.Candlestick(
-            x=df['timestamp'],
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
+            x=df['timestamp'],  # X-axis with timestamps
+            open=df['open'],  # Open prices
+            high=df['high'],  # High prices
+            low=df['low'],  # Low prices
+            close=df['close'],  # Close prices
             increasing_line_color='green',  # Color for increasing candles
-            decreasing_line_color='red'     # Color for decreasing candles
+            decreasing_line_color='red'  # Color for decreasing candles
         ))
 
-        # Update layout for better display
+        # Update chart layout for better appearance
         fig.update_layout(
-            title='Apple Inc. (AAPL) Stock OHLC Chart',
+            title='Stock OHLC Chart',
             xaxis_title='Date',
             yaxis_title='Price (USD)',
-            xaxis_rangeslider_visible=False
+            xaxis_rangeslider_visible=False  # Hide the range slider for clarity
         )
 
-        # Display the Plotly chart in Streamlit
+        # Display the chart in the Streamlit app
         st.plotly_chart(fig)
-    
-    def selectedCryptoChart(self, crypto):
-        real_time_price_parameter = f'?symbol={crypto['symbol']}&apikey={os.getenv('TOKEN')}'
-        real_time_price_response = self.apiCall('price', real_time_price_parameter, False)
-        time_series_parameter = f'?symbol={crypto['symbol']}&interval=1month&apikey={os.getenv('TOKEN')}'
-        time_series_response = self.apiCall('time_series', time_series_parameter, False)
-        last_month_daily_parameter = f'?symbol={crypto['symbol']}&interval=1day&outputsize=32&apikey={os.getenv('TOKEN')}'
-        last_month_daily = self.apiCall('time_series', last_month_daily_parameter, False)
-        # https://api.twelvedata.com/time_series?symbol=AAPL&interval=1day&outputsize=31&apikey=your_api_key
 
-        logging.info(f"==>> time_series_response: {time_series_response}")        
+    def selectedCryptoChart(self, crypto):
+        """
+        Displays real-time and historical charts for a selected cryptocurrency.
+
+        Parameters:
+        - crypto (dict): Dictionary containing cryptocurrency data.
+
+        Returns:
+        - None
+        """
+        # Construct API parameters for fetching real-time price
+        real_time_price_parameter = f"?symbol={crypto['symbol']}&apikey={os.getenv('TOKEN')}"
+        # Fetch real-time price data
+        real_time_price_response = self.apiCall('price', real_time_price_parameter, False)
+
+        # Construct API parameters for monthly time series
+        time_series_parameter = f"?symbol={crypto['symbol']}&interval=1month&apikey={os.getenv('TOKEN')}"
+        # Fetch monthly time series data
+        time_series_response = self.apiCall('time_series', time_series_parameter, False)
+
+        # Construct API parameters for daily time series of the last 32 days
+        last_month_daily_parameter = f"?symbol={crypto['symbol']}&interval=1day&outputsize=32&apikey={os.getenv('TOKEN')}"
+        last_month_daily = self.apiCall('time_series', last_month_daily_parameter, False)
+
+        # Display the real-time price
         st.markdown(f"""
 ### 💰 Real-Time Price for **{crypto['currency_base']}**
 #### Current Price: **${real_time_price_response['price']}**
 """, unsafe_allow_html=True)
-        monthly_chart = pd.DataFrame(time_series_response['values'])
-        st.subheader('Monthly Chart Trend')
-        self.cryptoLineGraphCreation(monthly_chart)
-        thirty_two_days = pd.DataFrame(last_month_daily['values'])
-        st.subheader('Daily Chart Trend for Last 32 Days')
-        self.cryptoLineGraphCreation(thirty_two_days)
-        # st.write(df)
 
+        # Plot the monthly and daily charts
+        self.cryptoLineGraphCreation(pd.DataFrame(time_series_response['values']))
+        self.cryptoLineGraphCreation(pd.DataFrame(last_month_daily['values']))
 
     def cryptoLineGraphCreation(self, df):
-        # Convert datetime column to pandas datetime type
+        """
+        Creates a line graph with markers for closing prices.
+
+        Parameters:
+        - df (DataFrame): DataFrame containing time series data.
+
+        Returns:
+        - None
+        """
+        # Convert 'datetime' column to pandas datetime type
         df["datetime"] = pd.to_datetime(df["datetime"])
-        # Convert to float and then format as strings with 4 decimal places
-        df["open"] = df["open"].apply(lambda x: Decimal(x))
+        # Convert 'close' column to Decimal type for precision
         df["close"] = df["close"].apply(lambda x: Decimal(x))
 
+        # Sort DataFrame by datetime
+        df.sort_values(by="datetime", inplace=True)
 
-        # Sort the DataFrame by date
-        df = df.sort_values(by="datetime")
-
-        # Calculate whether the close went up or down compared to the previous month
+        # Calculate the difference in close prices and assign marker colors
         df["change"] = df["close"].diff()
         df["marker_color"] = df["change"].apply(lambda x: "green" if x > 0 else "red")
 
-        # Create a line chart for the closing prices
-        fig = px.line(df, x="datetime", y="close",
-                    labels={"close": "Close Price (USD)", "datetime": "Date"})
+        # Create a line graph of close prices
+        fig = px.line(df, x="datetime", y="close")
 
-        # Add markers at the end of each month
+        # Add markers for monthly close points
         fig.add_trace(go.Scatter(
             x=df["datetime"],
             y=df["close"],
             mode="markers",
-            marker=dict(
-                size=10,
-                color=df["marker_color"],
-                line=dict(width=1, color="black")
-            ),
-            name="Monthly Close Marker"
+            marker=dict(size=10, color=df["marker_color"]),
+            name="Close Markers"
         ))
 
-        # Update layout for better readability
+        # Update layout and display the graph
+        fig.update_layout(xaxis_title="Date", yaxis_title="Price (USD)")
+        st.plotly_chart(fig)
+
+    
+    def selectedCryptoChart(self, crypto):
+        """
+        Fetches and displays real-time price, monthly trend, and daily trend charts for a selected cryptocurrency.
+
+        Parameters:
+        - crypto (dict): Dictionary containing information about the selected cryptocurrency.
+
+        Returns:
+        - None
+        """
+        # Construct API query parameter for real-time price
+        real_time_price_parameter = f'?symbol={crypto["symbol"]}&apikey={os.getenv("TOKEN")}'
+        # Make an API call to fetch real-time price data
+        real_time_price_response = self.apiCall('price', real_time_price_parameter, False)
+
+        # Construct API query parameter for monthly time series data
+        time_series_parameter = f'?symbol={crypto["symbol"]}&interval=1month&apikey={os.getenv("TOKEN")}'
+        # Make an API call to fetch monthly time series data
+        time_series_response = self.apiCall('time_series', time_series_parameter, False)
+
+        # Construct API query parameter for daily time series data (last 32 days)
+        last_month_daily_parameter = f'?symbol={crypto["symbol"]}&interval=1day&outputsize=32&apikey={os.getenv("TOKEN")}'
+        # Make an API call to fetch daily time series data
+        last_month_daily = self.apiCall('time_series', last_month_daily_parameter, False)
+
+        # Log the fetched monthly time series data for debugging purposes
+        logging.info(f"==>> time_series_response: {time_series_response}")
+
+        # Display real-time price using Markdown
+        st.markdown(f"""
+### 💰 Real-Time Price for **{crypto['currency_base']}**
+#### Current Price: **${real_time_price_response['price']}**
+""", unsafe_allow_html=True)
+
+        # Convert monthly time series data to a DataFrame
+        monthly_chart = pd.DataFrame(time_series_response['values'])
+        st.subheader('Monthly Chart Trend')  # Add a subheader for the monthly trend chart
+        self.cryptoLineGraphCreation(monthly_chart)  # Create and display the line graph for the monthly trend
+
+        # Convert daily time series data to a DataFrame
+        thirty_two_days = pd.DataFrame(last_month_daily['values'])
+        st.subheader('Daily Chart Trend for Last 32 Days')  # Add a subheader for the daily trend chart
+        self.cryptoLineGraphCreation(thirty_two_days)  # Create and display the line graph for the daily trend
+
+    def cryptoLineGraphCreation(self, df):
+        """
+        Creates a line graph with markers indicating the closing prices of the cryptocurrency.
+
+        Parameters:
+        - df (DataFrame): DataFrame containing the time series data.
+
+        Returns:
+        - None
+        """
+        # Convert the 'datetime' column to pandas datetime format
+        df["datetime"] = pd.to_datetime(df["datetime"])
+
+        # Convert 'open' and 'close' columns to Decimal type for better precision
+        df["open"] = df["open"].apply(lambda x: Decimal(x))
+        df["close"] = df["close"].apply(lambda x: Decimal(x))
+
+        # Sort the DataFrame by the 'datetime' column
+        df = df.sort_values(by="datetime")
+
+        # Calculate the change in 'close' prices and determine marker colors (green for increase, red for decrease)
+        df["change"] = df["close"].diff()
+        df["marker_color"] = df["change"].apply(lambda x: "green" if x > 0 else "red")
+
+        # Create a line chart for the 'close' prices using Plotly Express
+        fig = px.line(df, x="datetime", y="close",
+                      labels={"close": "Close Price (USD)", "datetime": "Date"})
+
+        # Add markers at the end of each month with colors indicating price increase or decrease
+        fig.add_trace(go.Scatter(
+            x=df["datetime"],  # X-axis values (dates)
+            y=df["close"],  # Y-axis values (close prices)
+            mode="markers",  # Display as markers
+            marker=dict(
+                size=10,  # Marker size
+                color=df["marker_color"],  # Marker color based on price change
+                line=dict(width=1, color="black")  # Outline color of the markers
+            ),
+            name="Monthly Close Marker"  # Name for the legend
+        ))
+
+        # Update chart layout for better readability
         fig.update_layout(xaxis_title="Date", yaxis_title="Price (USD)")
 
-        # Display the chart in Streamlit
+        # Display the line chart in Streamlit
         st.plotly_chart(fig)
-        
+
     def apiCall(self, endpoint: str, parameters: str = '', header: bool = True):
+        """
+        Sends an HTTP GET request to the Twelve Data API to fetch cryptocurrency data.
+
+        Parameters:
+        - endpoint (str): The API endpoint to call (e.g., 'price', 'time_series').
+        - parameters (str): The query parameters for the API request.
+        - header (bool): If True, include authorization headers; otherwise, make a simple GET request.
+
+        Returns:
+        - dict: The JSON response from the API.
+        """
+        # Log the API call for debugging
         logging.error(f"==>> api call to {endpoint} endpoint")
+
+        # Construct the URL without headers
         if header == False:
-            url = f"https://api.twelvedata.com/{endpoint}{parameters}" 
+            url = f"https://api.twelvedata.com/{endpoint}{parameters}"
             logging.warning(f"==>> url: {url}")
-            response = requests.get(url)
+            response = requests.get(url)  # Send GET request without headers
+
+        # Construct the URL with headers
         else:
             url = f"https://api.twelvedata.com/{endpoint}{parameters}"
             headers = {
-                "accept": "application/json",
-                "Authorization":os.getenv('TOKEN')
+                "accept": "application/json",  # Accept JSON response
+                "Authorization": os.getenv('TOKEN')  # Include API token from environment variables
             }
-            response = requests.get(url, headers)
-        # st.write(response.json())
+            response = requests.get(url, headers)  # Send GET request with headers
+
+        # Return the JSON response from the API
         return response.json()
-    
+
     def loadingComponent(self):
-        motivation_placeholder = st.empty()
-        time.sleep(2)
+        """
+        Displays a loading spinner with motivational messages during data fetch.
+
+        Returns:
+        - None
+        """
+        motivation_placeholder = st.empty()  # Create an empty placeholder for motivational messages
+        time.sleep(2)  # Delay for 2 seconds
+
+        # Display a loading spinner with motivational messages
         with st.spinner('Wait for it...'):
             counter = 0
-            while counter < 2:
-                motivation_placeholder.caption(self.dataset_arrays()[1])
-                time.sleep(2)
+            while counter < 2:  # Show two messages before clearing
+                motivation_placeholder.caption(self.dataset_arrays()[1])  # Display a random motivational message
+                time.sleep(2)  # Delay for 2 seconds
                 counter += 1
-        motivation_placeholder.empty()
-        return
+
+        motivation_placeholder.empty()  # Clear the placeholder after loading
+    
+    def sourceCode():
+        """
+        Displays the source code of the current script using Streamlit's `st.code()` component.
+
+        Returns:
+        - None
+        """
+        # Open the current script file in read mode
+        with open('main.py', 'r') as f:
+            content = f.read()  # Read the entire content of the file
+            # Display the source code in a formatted code block with syntax highlighting
+            st.code(content, language='python')
+
 
     def main(self):
+        """
+        Main method to manage view switching and handle user interaction.
+
+        Returns:
+        - None
+        """
+        # Initialize session state for view management if it doesn't exist
+        if "current_view" not in st.session_state:
+            st.session_state["current_view"] = "dashboard"  # Set the default view to 'dashboard'
+
+        # Button to switch to the source code view
+        if st.button("Switch to Source Code View"):
+            st.session_state["current_view"] = "source_code"  # Update session state to display the source code view
+
+        # Conditional rendering based on the current view
+        if st.session_state["current_view"] == "source_code":
+            self.source_code_view()  # Display the source code view
+        else:
+            self.dashboard_view()  # Display the main dashboard view
+
+
+    def dashboard_view(self):
+        """
+        Displays the main dashboard view with cryptocurrency data using Streamlit components.
+
+        Returns:
+        - None
+        """
+        # Title and header for the dashboard
         st.title("Real-Time Crypto Dashboard")
         st.header("This is a simple app to display cryptocurrency data")
-        st.divider()
-        st.markdown(f"<span style='color: {self.dataset_arrays()[0]};'>Full Stack</span> Development by Stevenson Gerard", unsafe_allow_html=True)
+        st.divider()  # Add a horizontal divider for visual separation
+
+        # Display a styled markdown message with color and text
+        st.markdown(
+            f"<span style='color: {self.dataset_arrays()[0]};'>Full Stack</span> Development by Stevenson Gerard",
+            unsafe_allow_html=True
+        )
+        # Display another styled markdown message with emoji and dynamic text color
         st.markdown(f"The :{self.dataset_arrays()[0]}[power] and :{self.dataset_arrays()[0]}[agility] of Python")
 
+        # Create an empty placeholder for the 'Get Stock Data' button
         market_placeholder = st.empty()
 
-        # Button to get stock data
+        # Initialize session state for the 'button_clicked' flag if it doesn't exist
         if 'button_clicked' not in st.session_state:
-            st.session_state['button_clicked'] = False
+            st.session_state['button_clicked'] = False  # Set the default flag to False
 
+        # Display a button to fetch stock data, update session state on click
         if market_placeholder.button('Get Stock Data', type='primary'):
-            st.session_state['button_clicked'] = True
+            st.session_state['button_clicked'] = True  # Set the flag to True when the button is clicked
 
-        # Check if the button was clicked
+        # Check if the 'Get Stock Data' button was clicked
         if st.session_state['button_clicked']:
-            market_placeholder.empty()
+            market_placeholder.empty()  # Clear the placeholder after the button is clicked
 
-            # Fetch cryptocurrency data
+            # Fetch the list of cryptocurrencies from the API
             crypto_response = self.apiCall('cryptocurrencies')
+            # Create a list of unique cryptocurrency names
             unique_names = list({each_object['currency_base']: "" for each_object in crypto_response['data']})
-            unique_names.insert(0, 'Select an option')
+            unique_names.insert(0, 'Select an option')  # Insert a default option at the beginning
 
-            # Initialize session state for the selected option
+            # Initialize session state for the selected cryptocurrency if it doesn't exist
             if 'selected_crypto' not in st.session_state:
-                st.session_state['selected_crypto'] = 'Select an option'
+                st.session_state['selected_crypto'] = 'Select an option'  # Set default selection
 
-            # Create the selectbox and update session state
+            # Display a select box for choosing a cryptocurrency
             selection_options = st.selectbox(
-                "Select a cryptocurrency:",
-                unique_names,
-                index=unique_names.index(st.session_state['selected_crypto']),
-                key='crypto_select'
+                "Select a cryptocurrency:",  # Label for the select box
+                unique_names,  # List of options to display
+                index=unique_names.index(st.session_state['selected_crypto']),  # Set the default index
+                key='crypto_select'  # Use session state key to track the selected option
             )
 
             # Update session state with the selected option
             st.session_state['selected_crypto'] = selection_options
-            logging.info(f"==>> selection_options: {selection_options}")
-            logging.info(f"==>> unique_names: {unique_names}")
+            logging.info(f"==>> selection_options: {selection_options}")  # Log the selected option for debugging
 
             # Check if a valid cryptocurrency is selected
             if selection_options != 'Select an option':
-                logging.info(f"==>> selection_options: {selection_options}")
-                self.loadingComponent()
+                self.loadingComponent()  # Display a loading spinner
 
-                # Filter the selected cryptocurrency
+                # Filter the API response to find the selected cryptocurrency object
                 find_selected_object = filter(
                     lambda tmp: tmp['currency_base'] == selection_options,
                     crypto_response['data']
                 )
-                crypto_selected = list(find_selected_object)[0]
+                crypto_selected = list(find_selected_object)[0]  # Extract the selected cryptocurrency object
 
-                # Display the selected cryptocurrency chart
+                # Display the selected cryptocurrency's chart
                 self.selectedCryptoChart(crypto_selected)
 
 
- 
+    def source_code_view(self):
+        # Button to return to the main dashboard view
+        if st.button("Tap Twice to Go Back to Dashboard"):
+            st.session_state["current_view"] = "dashboard"  # Update session state to display the dashboard view
+            st.session_state.clear()  # Clear session state to force a re-render of the dashboard view
 
+        
+        #Displays the source code of the current script using Streamlit's `st.code()` component.
+        #Returns: - None
+        # Display the title of the source code view
+        st.title("Source Code View")
+        # Display a markdown message
+        st.markdown("### Here you can display the source code or any other content.")
 
+        # Open the current script file in read mode and display its content
+        with open('main.py', 'r') as f:
+            content = f.read()  # Read the entire content of the file
+            st.code(content, language='python')  # Display the source code with syntax highlighting
+
+        if st.button("Tap Twice to Go Back to Dashboard."):
+            st.session_state["current_view"] = "dashboard"  # Update session state to display the dashboard view
+            st.session_state.clear()  # Clear session state to force a re-render of the dashboard view
+
+        
+
+# Entry point of the application
 if __name__ == "__main__":
-    instantiate = CryptoView()
-    main_page_header = instantiate.main()
+    instantiate = CryptoView()  # Instantiate the CryptoView class
+    main_page_header = instantiate.main()  # Call the main method to start the app
